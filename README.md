@@ -2,6 +2,11 @@
 
 This tool is used to decrypt the .DAT files exported by DJI assistant. 
 
+Currently only supports the following models:
+- DJI Goggles 2
+- DJI O3 Air Unit
+- DJI Avata
+
 ## Usage
 
 #### Web 
@@ -27,4 +32,4 @@ npm run build::cli
 ```
 
 ## Thanks
-Massive thanks to Joonas @j005u from ([fpv.wtf](https://fpv.wtf/)) without whom this would not have been possible.
+Massive thanks to Joonas @j005u from [fpv.wtf](https://fpv.wtf/) without whom this would not have been possible.
