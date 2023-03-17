@@ -8,12 +8,14 @@ class FileParser {
         this.fileChunks = [];
     }
 
-    parse(file) { // file = uint8array of the raw .DAT file
+    async parse(file) { // file = uint8array of the raw .DAT file
         const fileLength = file.length;
         let currentOffset = 0;
         // sanity check the first byte is 0xA4 
         if (file[0] !== 0xA4) throw new Error("Invalid file");
         console.log(`File length: ${fileLength}`);
+
+        const parseLoghItems = [];
 
         while (currentOffset < fileLength) {
             console.log(`Current offset: ${currentOffset}`);
@@ -33,14 +35,15 @@ class FileParser {
                 continue;
             }
 
+
             // check if the datItem contains a LOGH item
             if (datItem.data[0] === 0x4C && datItem.data[1] === 0x4F && datItem.data[2] === 0x47 && datItem.data[3] === 0x48) {
                 const loghItem = new ParseLoghItem();
-                loghItem.parse(datItem.data);
+                await loghItem.parse(datItem.data); // not a fan of having to await here, but it is what it is
 
                 this.fileChunks.push({
                     filePath: datItem.filePath,
-                    data: loghItem.data,
+                    data: loghItem.data
                 });
             } else {
                 this.fileChunks.push({
@@ -48,8 +51,6 @@ class FileParser {
                     data: datItem.data
                 });
             }
-
-
             currentOffset += parsedBytes;
         }
 

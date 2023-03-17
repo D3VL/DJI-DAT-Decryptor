@@ -14,12 +14,16 @@ export const offsets = {
         dataLength: [0x10, 0x08], // How long the data is
         modelType: [0x18, 0x10], // Model number of the device
         serialNumber: [0x28, 0x10], // Serial number of the device
+        cmacBytes: [0x18, 0x44]
     }
 }
 
 export const keys = {
-    "e3t_zv900": {
-        productCode: "e3t_zv900", // allow .find() to work
+    "e3t_zv900": { // Goggles 2
+        key: [181, 44, 153, 102, 153, 211, 91, 20, 228, 205, 88, 106, 232, 120, 176, 109], // -> b52c996699d35b14e4cd586ae878b06d
+        iv: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    "e3t_wm169": { // Avata and O3 Air Unit
         key: [181, 44, 153, 102, 153, 211, 91, 20, 228, 205, 88, 106, 232, 120, 176, 109], // -> b52c996699d35b14e4cd586ae878b06d
         iv: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     }

@@ -1,1 +1,182 @@
-<!-- todo: webui -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <!-- scale meta -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DJI Dat Decryptor</title>
+    <!-- Minimal effort! -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+
+    <style>
+        /* dropzone */
+        .dropzone {
+            border: 2px dashed #0087F7;
+            border-radius: 5px;
+            background: white;
+            min-height: 150px;
+            padding: 54px 54px;
+        }
+
+        #file {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+        }
+
+        /* log container */
+        .log {
+            height: 200px;
+            overflow-y: scroll;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="display-3">DJI Dat Decryptor</h1>
+        <p class="lead">Decrypt the .DAT files exported by DJI Assistant.</p>
+        <p>
+            👀 Check out the accompanying blog post 👉 <a href="https://d3vl.com/blog/is-your-dji-o3-spying-on-you/">Is Your DJI O3 Spying On You?</a>
+            <br>
+            ⚠️ Currently only supports Goggles 2, Avata and O3 Air Units!
+        </p>
+
+        <!-- dropzone using a html card -->
+        <div class="card border p-5 dropzone text-center">
+            <span class="display-6 text-muted d-none d-sm-block mt-5">Drop .DAT file here!</span>
+            <span class="display-6 text-muted d-sm-none mt-5">Tap here to upload file</span>
+
+            <small id="filedropstatus" class="text-muted m-3">&nbsp;</small>
+
+            <!-- input file -->
+            <input type="file" id="file" accept=".dat">
+        </div>
+
+        <!-- Log output -->
+        <div class="card border mt-5 bg-dark">
+            <div class="card-body text-light">
+                <h5 class="card-title">Log</h5>
+                <p class="card-text log" id="log">
+
+                </p>
+            </div>
+        </div>
+
+        <!-- footer -->
+        <div class="w-100 text-center mt-5">
+            <p class="card-text">
+                Built By <a href="https://d3vl.com/" style="color:#ff3e3e">D3VL</a><br>
+            </p>
+            <p class="text-muted">
+                Huge thanks to Joonas from <a href="https://fpv.wtf/" style="color:#507ac3">fpv.wtf</a><br>
+                without whom this would not have been possible.
+            </p>
+            <p>
+                An open source project<br><a href="https://github.com/D3VL/DJI-Dat-Decryptor" class="text-muted">D3VL/DJI-Dat-Decryptor</a>
+            </p>
+        </div>
+
+    </div>
+
+    <script src="decryptor.bundle.js"></script>
+    <script>
+
+        const logItem = (item) => {
+            document.querySelector('#log').innerHTML += `${item}<br/>`;
+            // scroll to bottom
+            document.querySelector('#log').scrollTop = document.querySelector('#log').scrollHeight;
+        };
+
+        const onFileDrop = async (file) => {
+            // show file name
+            document.querySelector('#filedropstatus').innerHTML = file.name;
+
+            // check file ends in .DAT, if not, return
+            if (!file.name?.toLowerCase().endsWith('.dat')) {
+                document.querySelector('#filedropstatus').innerHTML = 'File is not a .DAT file!';
+                // empty file input
+                document.querySelector('#file').value = '';
+                return;
+            }
+
+            logItem(`File: ${file.name}`);
+            logItem(`Reading file...`)
+
+
+            const reader = new FileReader();
+            reader.readAsArrayBuffer(file);
+
+
+            reader.addEventListener('progress', (event) => {
+                if (event.loaded && event.total) {
+                    const percent = (event.loaded / event.total) * 100;
+                    logItem(`Progress: ${Math.round(percent)}%`);
+                }
+            });
+
+            reader.addEventListener('load', async (event) => {
+                const fileData = event.target.result;
+                // Do something with result
+
+                // get the file contents as a uint8array
+
+                logItem(`File size: ${fileData.byteLength} bytes`);
+                logItem(`Decrypting file...`);
+                logItem(`Please be patient, this may take a while...`);
+                let parsedFile = null;
+                // create a new FileReader
+                try {
+                    parsedFile = await DjiDatDecryptor.parseFile(new Uint8Array(fileData));
+                } catch (e) {
+                    logItem(`Error: ${e.message}`);
+                    return;
+                }
+
+                if (!parsedFile) {
+                    logItem(`Error: Some strange error occured!`);
+                    return;
+                }
+
+                if (parsedFile.length === 0) {
+                    logItem(`Error: No files found!`);
+                    return;
+                }
+
+                logItem(`File decrypted!`);
+                logItem(`Found ${parsedFile.length} files inside!`);
+
+                logItem(`Creating zip file...`);
+                // create a new zip file
+                const zip = DjiDatDecryptor.zipResults(parsedFile);
+                logItem(`Zip file created!`);
+                logItem(`Downloading zip file...`);
+                // download the zip file, from uint8array to blob
+                const blob = new Blob([zip], { type: 'application/zip' });
+                const url = URL.createObjectURL(blob);
+
+                // insert shadow element and click it
+                document.body.insertAdjacentHTML('beforeend', `<a id="download" href="${url}" download="${file.name.replace('.DAT', '')}.zip"></a>`);
+                document.querySelector('#download').click();
+                document.querySelector('#download').remove();
+
+                setTimeout(() => {
+                    logItem(`File didn't download? <a href="${url}" download="${file.name.replace('.DAT', '')}.zip">Click here</a> to download it manually.`);
+                }, 1000);
+            });
+        };
+
+        // watch for file input
+        document.querySelector('#file').addEventListener('input', (e) => {
+            onFileDrop(e.target.files[0]);
+        });
+
+    </script>
+
+</body>
+
+</html>

@@ -7,11 +7,12 @@ class LoghItem {
     constructor() {
         this.isParsed = false;
         this.data = [];
+        this.cmacBytes = null;
         this.serialNumber = "";
         this.modelType = "";
     }
 
-    parse(data) {
+    async parse(data) {
         if (this.isParsed) throw new Error("LoghItem is already parsed");
 
         // check the first 4 bytes are 0x4C4F4748, our magic number
@@ -30,8 +31,20 @@ class LoghItem {
         // extract the data
         const slicedData = data.slice(dataOffset, dataOffset + dataLength);
 
+        this.cmacBytes = data.slice(...getOffsets(offsets.LOGH.cmacBytes));
+
         // decrypt the data
-        this.data = decrypt(slicedData, this.modelType);
+        this.data = await decrypt(slicedData, this.modelType, this.cmacBytes);
+
+        // count how many trailing 0x0C bytes there are for padding
+        let padding = 0;
+        for (let i = this.data.length - 1; i >= 0; i--) {
+            if (this.data[i] === 0x0C) padding++;
+            else break;
+        }
+
+        // cut the first 0x10 bytes off the data, this is garbage
+        this.data = this.data.slice(0x10, this.data.length - padding);
 
         this.isParsed = true;
     }
